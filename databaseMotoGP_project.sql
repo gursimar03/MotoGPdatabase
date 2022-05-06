@@ -1,6 +1,6 @@
-DROP DATABASE IF EXISTS practiceTestProject;
-CREATE DATABASE IF NOT EXISTS practiceTestProject;
-USE practiceTestProject;
+DROP DATABASE IF EXISTS motogp_database;
+CREATE DATABASE IF NOT EXISTS motogp_database;
+USE motogp_database;
 DROP TABLE IF EXISTS riders, teams, assigned_rider,bikes,rankings,circuits;
 
 
@@ -85,10 +85,21 @@ VALUES ('RD33', 'Brad Binder', '1995-08-11', 'Potchefstroom', 'South Africa'),
 INSERT INTO `riders` (`riderID`, `rider_name`, `date_of_birth`, `place_of_birth`, `country`) 
 VALUES ('RD36', 'Joan Mir', '1997-09-01', 'Palma de Mallorca', 'Spain');
 
+
+
+
+--Query 1
+--While doing the last insert in riders table on of the riders had a place of birth bigger than the specified length of VARCHAR 
+--So I changed it to a bigger ,VARCHAR(20)
+
 ALTER TABLE `riders` CHANGE `place_of_birth` `place_of_birth` VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL;
 
+--Query 2
+--After the alter table I set the place of birth for rider RD36 again as last time last few letter where croped as it didnt fit the varchar
 UPDATE `riders` SET `place_of_birth` = 'Palma de Mallorca' WHERE `riders`.`riderID` = 'RD36';
 
+--Query 3
+--Checked if the update worked 
 SELECT place_of_birth FROM riders WHERE riders.riderID = 'RD36';
 
 
@@ -132,8 +143,12 @@ VALUES
 ('CR10', 'Circuit de Barcelona-Catalunya', '4.655', 'Dry', '25');
 
 
+--Query 4
+--the same problem happpened again where the value inserted was larger than the specfied 
 ALTER TABLE circuits CHANGE circuit_name circuit_name varchar(40);
 
+--Query 5
+--I added the missing value in circuit name
 UPDATE `circuits` SET `circuit_name` = 'Autodromo Internazionale del Mugello' WHERE `circuits`.`circuitID` = 'CR09';
 
 INSERT INTO `bikes` (`teamID`, `bike_name`, `engine_type`, `max_power`, `max_speed`, `bike_tires`, `fuel_capacity`, `dry_weight`) 
@@ -170,11 +185,116 @@ VALUES
 ('4', 'RD63', 'T03', 'CR02', '2022-03-20'),
 ('5', 'RD12', 'T07', 'CR02', '2022-03-20');
 
+--Query 6
+--Renaming the table as it was grammatically incorrect
+ALTER TABLE assigned_rider RENAME TO assigned_riders;
+
 SELECT * from rankings WHERE race_date="2022-03-06";
 
+--Query 7
+--With this query we can see the ranking for the race which happened on 6th for march
 SELECT * from rankings WHERE race_date="2022-03-06" ORDER BY ranking ASC;
 
+--Query 8
+--In this query we can see the rider name and his ranking on 6th of march, I joined riders table with ranking to get rider_name with riderID
 SELECT riders.rider_name , rankings.ranking FROM rankings 
     JOIN riders ON rankings.riderID = riders.riderID WHERE race_date = "2022-03-06" ORDER BY ranking ASC;
 
+--Query 9
+--in this table we can see bikes who won the race by joining bikes and ranking with the teamID
 SELECT bikes.bike_name , rankings.race_date FROM bikes JOIN rankings ON rankings.teamID = bikes.teamID WHERE ranking = 1;
+
+--Query 10
+--This query will show rider name, bike name and  the race date to see respective bikes used by the racers 
+SELECT riders.rider_name, bikes.bike_name, rankings.race_date FROM rankings 
+    JOIN riders ON riders.riderID = rankings.riderID 
+    JOIN bikes ON rankings.teamID = bikes.teamID 
+    WHERE rankings.race_date = "2022-03-06";
+
+--Query 11
+--In this query riders with their respective team name
+SELECT teams.team_name, riders.rider_name FROM assigned_riders 
+    JOIN riders ON riders.riderID = assigned_riders.riderID 
+    JOIN teams ON assigned_riders.teamID = teams.teamID;
+
+--Query 12
+--this query is usefull when we want to see the max speed of the bike which is used by the teams
+SELECT riders.rider_name, teams.team_name , bikes.max_speed FROM assigned_riders 
+    JOIN teams ON teams.teamID = assigned_riders.teamID 
+    JOIN bikes ON assigned_riders.teamID = bikes.teamID 
+    JOIN riders ON assigned_riders.riderID = riders.riderID;
+
+--Query 13
+--I created a new column named as avg_speed to add it to ranking table as it would be useful to know the average speed of the riders with repsect to their ranks
+--This will also help to determine the future ranking with calulating avg_speed by track length
+ALTER TABLE rankings ADD avg_speed INT;
+ALTER TABLE `rankings` CHANGE `avg_speed` `avg_speed` DOUBLE;
+
+UPDATE rankings SET avg_speed = 154.2 WHERE riderID = "RD23";
+UPDATE rankings SET avg_speed = 154.3 WHERE riderID = "RD23" AND race_date="2022-03-06";
+UPDATE rankings SET avg_speed = 154.1 WHERE riderID = "RD20" AND race_date ="2022-03-06";
+UPDATE rankings SET avg_speed = 154.0 WHERE riderID = "RD5" AND race_date ="2022-03-06";
+UPDATE rankings SET avg_speed = 154.2 WHERE riderID = "RD33" AND race_date ="2022-03-06";
+UPDATE rankings SET avg_speed = 154.2 WHERE riderID = "RD44" AND race_date ="2022-03-06";
+UPDATE rankings SET avg_speed = 168.2 WHERE riderID = "RD25" AND race_date="2022-03-20";
+UPDATE rankings SET avg_speed = 168.1 WHERE riderID = "RD23" AND race_date ="2022-03-20";
+UPDATE rankings SET avg_speed = 168.1 WHERE riderID = "RD36" AND race_date ="2022-03-20";
+UPDATE rankings SET avg_speed = 168.0 WHERE riderID = "RD63" AND race_date ="2022-03-20";
+UPDATE rankings SET avg_speed = 167.9 WHERE riderID = "RD12" AND race_date ="2022-03-20";
+
+
+--Query 14
+--This query shows us the ranking with avg speed for better future compatibilty 
+--It also orders the table with race date and ranking so ranking would be arraged in racedate as well as ranking of the perticular date
+SELECT rankings.ranking, riders.rider_name, riders.country,  teams.team_name , bikes.max_speed as bike_max_speed , rankings.avg_speed , rankings.race_date  
+FROM assigned_riders 
+    JOIN teams ON teams.teamID = assigned_riders.teamID 
+    JOIN rankings ON assigned_riders.riderID = rankings.riderID 
+    JOIN bikes ON assigned_riders.teamID = bikes.teamID 
+    JOIN riders ON assigned_riders.riderID = riders.riderID
+	ORDER BY rankings.race_date, rankings.ranking ASC;
+
+--Query 15
+--This will show use the ranking table of the date 2022-03-06
+SELECT rankings.ranking, riders.rider_name, riders.country,  teams.team_name , bikes.max_speed as bike_max_speed , rankings.avg_speed , rankings.race_date  
+FROM assigned_riders 
+    JOIN teams ON teams.teamID = assigned_riders.teamID 
+    JOIN rankings ON assigned_riders.riderID = rankings.riderID 
+    JOIN bikes ON assigned_riders.teamID = bikes.teamID 
+    JOIN riders ON assigned_riders.riderID = riders.riderID
+	WHERE race_date = "2022-03-06"
+	ORDER BY rankings.ranking ASC;
+
+--Query 16
+--This table calculates and shows the name of the circuit with the length of each lap , total lap, bike name and engine type
+--then we calulate the avg_time it should take by each bike to complete the race with there max_speed with this we could predict the timing for future races 
+--I used Cast so that in output only last to decimal points
+SELECT circuits.circuit_name , circuits.track_length as lap_length , (circuits.track_length * 20) as total_length, bikes.bike_name , bikes.engine_type , 
+    CAST((circuits.track_length * 2000)/(bikes.max_speed)as decimal(10,2)) as avg_expected_time FROM circuits , bikes;
+
+
+--Query 17
+-- This query will show teams table with their repesentative countries by joining assigned_riders table to riders and teams
+SELECT teams.team_name , teams.team_founded_by , riders.country 
+    FROM assigned_riders 
+    JOIN teams ON assigned_riders.teamID = teams.teamID 
+    JOIN riders ON riders.riderID = assigned_riders.riderID;
+
+--Query 18
+--Shows total wins of teams with their bike name and bike's max power
+SELECT teams.team_name , teams.total_wins ,bikes.bike_name, bikes.max_power 
+    FROM teams 
+    JOIN bikes ON teams.teamID = bikes.teamID 
+    ORDER BY total_wins DESC;
+
+
+--Query 19
+--This table shows all the bikes avg_expected_time on the track CR01 
+SELECT circuits.circuit_name , circuits.track_length as lap_length , (circuits.track_length * 20) as total_length, bikes.bike_name , bikes.engine_type , 
+    CAST((circuits.track_length * 2000)/(bikes.max_speed)as decimal(10,2)) as avg_expected_time 
+    FROM circuits , bikes 
+    WHERE circuits.circuitID = "CR01" 
+    GROUP BY bikes.bike_name 
+    ORDER BY avg_expected_time ASC;
+
+ALTER TABLE `rankings` CHANGE `ranking` `position` INT(11) NOT NULL;
